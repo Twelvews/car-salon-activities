@@ -122,7 +122,12 @@ celerybeat.pid
 # Environments
 .env
 .venv
-env/
+env/production/*
+env/development/*
+env/tests/*
+!env/production/*example*
+!env/development/*example*
+!env/tests/*example*
 venv/
 ENV/
 env.bak/
@@ -159,5 +164,5 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-car_salon_activities/data/
-car_salon_activities/docs/_build/
+src/data/
+src/docs/_build/

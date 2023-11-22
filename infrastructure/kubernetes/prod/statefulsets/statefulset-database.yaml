@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: statefulset-database
+  namespace: production
+spec:
+  serviceName: service-database-headless
+  replicas: 3
+  revisionHistoryLimit: 10
+  minReadySeconds: 10
+  selector:
+    matchLabels:
+      app: database-postgres
+      rel: stable
+  template:
+    metadata:
+      name: pod-database
+      labels:
+        app: database-postgres
+        rel: stable
+    spec:
+      serviceAccountName: service-account-production
+      containers:
+      - name: postgres
+        image: postgres:14.4-alpine
+        args:
+          - -c
+          - shared_buffers=4GB
+          - -c
+          - wal_level=logical
+          - -c
+          - wal_writer_delay=400ms
+          - -c
+          - synchronous_commit=off
+          - -c
+          - autovacuum_naptime=5min
+          - -c
+          - autovacuum_max_workers=8
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 5432
+          protocol: TCP
+        envFrom:
+        - secretRef:
+            name: secret-database-production
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/postgresql/data
+        startupProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - exec pg_isready -U Twelve -h 127.0.0.1 -p 5432
+          initialDelaySeconds: 3
+          successThreshold: 1
+          failureThreshold: 18
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - exec pg_isready -U Twelve -h 127.0.0.1 -p 5432
+          initialDelaySeconds: 5
+          successThreshold: 1
+          failureThreshold: 6
+          periodSeconds: 10
+          timeoutSeconds: 5
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - exec pg_isready -U Twelve -h 127.0.0.1 -p 5432
+          initialDelaySeconds: 30
+          successThreshold: 1
+          failureThreshold: 6
+          periodSeconds: 10
+          timeoutSeconds: 5
+      restartPolicy: Always
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      resources:
+        requests:
+          storage: 1Gi
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: ""
