@@ -1,0 +1,11 @@
+version: '3.7'
+
+services:
+  rabbitmq:
+    env_file:
+      - ./env/development/.env.dev.rabbitmq
+    volumes:
+      - ./src/data/dev/rabbitmq:/var/lib/rabbitmq
+    networks:
+      back-dev:
+        ipv4_address: 192.168.10.9

@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deployment-rabbitmq
+  namespace: production
+spec:
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: rabbitmq
+      rel: stable
+  template:
+    metadata:
+      name: rabbitmq-pod
+      labels:
+        app: rabbitmq
+        rel: stable
+    spec:
+      serviceAccountName: service-account-production
+      containers:
+      - name: rabbitmq
+        image: rabbitmq:3.10.7-management-alpine
+        imagePullPolicy: Always
+        ports:
+        - name: amqp
+          containerPort: 5672
+          protocol: TCP
+        - name: management
+          containerPort: 15672
+          protocol: TCP
+        envFrom:
+          - secretRef:
+              name: secret-rabbit-production
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/rabbitmq
+        startupProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - exec rabbitmq-diagnostics -q check_port_connectivity
+          initialDelaySeconds: 3
+          successThreshold: 1
+          failureThreshold: 18
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - exec rabbitmq-diagnostics -q check_port_connectivity
+          initialDelaySeconds: 5
+          successThreshold: 1
+          failureThreshold: 6
+          periodSeconds: 10
+          timeoutSeconds: 5
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - exec rabbitmq-diagnostics -q check_port_connectivity
+          initialDelaySeconds: 30
+          successThreshold: 1
+          failureThreshold: 6
+          periodSeconds: 10
+          timeoutSeconds: 5
+      volumes:
+      - name: data
+        hostPath:
+          path: /k8s/data/prod/rabbitmq
+      restartPolicy: Always

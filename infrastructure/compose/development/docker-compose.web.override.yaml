@@ -1,0 +1,88 @@
+version: '3.7'
+
+x-env: &default-env
+  env_file:
+    - ./env/development/.env.dev.django
+
+services:
+  django:
+    <<: *default-env
+    build:
+      context: ./src
+      dockerfile: Dockerfile
+    entrypoint:
+      - ./django-entrypoint.sh
+    hostname: django
+    ports:
+      - 8000:${DJANGO_SERVER_PORT}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -k https://localhost:${DJANGO_SERVER_PORT}/api/v1/schema/swagger/"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      back-dev:
+        ipv4_address: 192.168.10.2
+    volumes:
+      - ./certs:/code/certs:ro/
+    links:
+      - celery
+      - beat
+    depends_on:
+      celery:
+        condition: service_healthy
+      beat:
+        condition: service_healthy
+    restart: always
+
+  migrations:
+    <<: *default-env
+    build:
+      context: ./src
+      dockerfile: Dockerfile
+    entrypoint:
+      - ./migrations-entrypoint.sh
+    networks:
+      back-dev:
+        ipv4_address: 192.168.10.3
+
+  celery:
+    <<: *default-env
+    build:
+      context: ./src
+      dockerfile: Dockerfile
+    entrypoint:
+      - ./celery-entrypoint.sh
+    networks:
+      back-dev:
+        ipv4_address: 192.168.10.4
+
+  beat:
+    <<: *default-env
+    build:
+      context: ./src
+      dockerfile: Dockerfile
+    entrypoint:
+      - ./beat-entrypoint.sh
+    networks:
+      back-dev:
+        ipv4_address: 192.168.10.5
+
+  flower:
+    <<: *default-env
+    build:
+      context: ./src
+      dockerfile: Dockerfile
+    entrypoint:
+      - ./flower-entrypoint.sh
+    networks:
+      back-dev:
+        ipv4_address: 192.168.10.6
+
+  sphinx:
+    build:
+      context: ./src/
+      dockerfile: Dockerfile-sphinx
+    networks:
+      back-dev:
+        ipv4_address: 192.168.10.7

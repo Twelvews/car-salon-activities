@@ -1,0 +1,11 @@
+version: '3.7'
+
+services:
+  redis:
+    env_file:
+      - ./env/production/.env.prod.redis
+    volumes:
+      - ./src/data/prod/redis:/root/redis
+    networks:
+      back-prod:
+        ipv4_address: 172.168.10.9

@@ -1,0 +1,78 @@
+version: '3.7'
+
+x-env: &default-env
+  env_file:
+    - ./env/tests/.env.tests.django
+
+services:
+  tests:
+    <<: *default-env
+    build:
+      context: ./src
+      dockerfile: Dockerfile-tests
+    entrypoint:
+      - ./tests-entrypoint.sh
+    networks:
+      back-tests:
+        ipv4_address: 182.168.10.2
+    links:
+      - celery
+      - beat
+    depends_on:
+      celery:
+        condition: service_healthy
+      beat:
+        condition: service_healthy
+    restart: no
+
+  migrations:
+    <<: *default-env
+    build:
+      context: ./src
+      dockerfile: Dockerfile-tests
+    entrypoint:
+      - ./migrations-entrypoint.sh
+    networks:
+      back-tests:
+        ipv4_address: 182.168.10.3
+
+  celery:
+    <<: *default-env
+    build:
+      context: ./src
+      dockerfile: Dockerfile-tests
+    entrypoint:
+      - ./celery-entrypoint.sh
+    networks:
+      back-tests:
+        ipv4_address: 182.168.10.4
+
+  beat:
+    <<: *default-env
+    build:
+      context: ./src
+      dockerfile: Dockerfile-tests
+    entrypoint:
+      - ./beat-entrypoint.sh
+    networks:
+      back-tests:
+        ipv4_address: 182.168.10.5
+
+  flower:
+    <<: *default-env
+    build:
+      context: ./src
+      dockerfile: Dockerfile-tests
+    entrypoint:
+      - ./flower-entrypoint.sh
+    networks:
+      back-tests:
+        ipv4_address: 182.168.10.6
+
+  sphinx:
+    build:
+      context: ./src/
+      dockerfile: Dockerfile-sphinx
+    networks:
+      back-tests:
+        ipv4_address: 182.168.10.7
